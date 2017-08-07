@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Appetizer Report</title>
+    <meta name="author" content="AppetizerIO">
+    
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/dataTables.bootstrap.css" rel="stylesheet">
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script type="text/javascript" src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script type="text/javascript" src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+
+  <body>
+    <div class="container">
+      <h2 class="text-center">Appetizer导出报告</h2>
+      <ul class="nav nav-tabs" role="tablist">
+        <li role="presentation" class="active"><a href="#crash" aria-controls="crash" role="tab" data-toggle="tab">错误报告</a></li>
+        <li role="presentation"><a href="#perf" aria-controls="perf" role="tab" data-toggle="tab">性能问题</a></li>
+        <li role="presentation"><a href="#http" aria-controls="http" role="tab" data-toggle="tab">HTTP请求响应</a></li>
+      </ul>
+      <div class="tab-content">
+        <br/>
+        <div role="tabpanel" class="tab-pane active" id="crash">
+          <table cellpadding="0" cellspacing="0" border="0" class="dataTable table table-striped" id="crash-tab">
+            <thead>
+              <tr>
+                  <th>Exception name</th>
+                  <th>Crash message</th>
+                  <th>Available RAM</th>
+                  <th>Available Ext. Storage</th>
+                  <th>Stacktrace</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+        <div role="tabpanel" class="tab-pane" id="perf">
+          <table cellpadding="0" cellspacing="0" border="0" class="dataTable table table-striped" id="perf-tab">
+            <thead>
+              <tr>
+                  <th>Problem</th>
+                  <th>Duration</th>
+                  <th>Method</th>
+                  <th>Stacktrace</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+        <div role="tabpanel" class="tab-pane" id="http">
+          <table cellpadding="0" cellspacing="0" border="0" class="dataTable table table-striped" id="http-tab">
+            <thead>
+              <tr>
+                  <th>Problem</th>
+                  <th>HTTP Method</th>
+                  <th>URL</th>
+                  <th>Latency (ms)</th>
+                  <th>Transmit Time (ms)</th>
+                  <th>Transmit Speed (B/s)</th>
+                  <th>Response Type</th>
+                  <th>Response Length (Byte)</th>
+                  <th>API Used</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <footer class='footer'>
+      <div class='container-fluid'>
+        <hr />
+        <p class='pull-right'>您的报告由 <a href="https://appetizer.io">Appetizer</a> 自动产生</p>
+      </div>
+    </footer>
+
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="js/dataTables.bootstrap.js"></script>
+    <script type="text/javascript" src="data.js"></script>
+
+    <script type="text/javascript">
+      $(document).ready(function() {
+        var crash_data = [], perf_data = [], http_data = [];
+        for (var i = 0; i < dataset.length; ++i) {
+          var d = dataset[i];
+          // normalize stacktrace
+          var stacktrace = "", rawtrace = [];
+          if (d.hasOwnProperty('highlight')) rawtrace = d.highlight;
+          if (d.hasOwnProperty('all_threads')) rawtrace = d.all_threads['main'];
+          for (var j = 0; j < rawtrace.length; ++j) {
+            stacktrace += rawtrace[j].method + '(' + rawtrace[j].filename + ':' + rawtrace[j].line + ')\n';
+          }
+          d.stacktrace = stacktrace;
+          if (d.category === 'http') {
+            d.transmit_time = d.transmit_time || 0;
+            d.transmit_speed = d.transmit_speed || 0;
+            http_data.push(d);
+          }
+          if (d.category === 'crash') {
+            crash_data.push(d);
+          }
+          if (d.category === 'perf') {
+            d.elapsed_time = d.elapsed_time || d.duration;
+            if (d.hasOwnProperty('clazz')) {
+              d.stacktrace = d.clazz;
+            }
+            perf_data.push(d);
+          }
+        }
+        $('#crash-tab').DataTable({
+          pagingType: "full_numbers",
+          data: crash_data,
+          columns: [
+            { data: 'exception_name' },
+            { data: 'exception_message' },
+            { data: 'available_ram_size' },
+            { data: 'available_external_size' },
+            { data: 'stacktrace' },
+          ],
+          select: 'single',
+          responsive: true,
+        });
+        $('#http-tab').DataTable({
+          pagingType: "full_numbers",
+          data: http_data,
+          columns: [
+            { data: 'problem' },
+            { data: 'method' },
+            { data: 'url' },
+            { data: 'elapsed_time' },
+            { data: 'transmit_time' },
+            { data: 'transmit_speed' },
+            { data: 'response.content_type.MIME' },
+            { data: 'response.content_length' },
+            { data: 'api_type' },
+          ],
+          select: 'single',
+          responsive: true,
+        });
+        $('#perf-tab').DataTable({
+          pagingType: "full_numbers",
+          data: perf_data,
+          columns: [
+            { data: 'problem' },
+            { data: 'elapsed_time' },
+            { data: 'method' },
+            { data: 'stacktrace' },
+          ],
+          select: 'single',
+          responsive: true,
+        });
+        
+      });
+    </script>
+  </body>
+</html>
