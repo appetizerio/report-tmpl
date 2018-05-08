@@ -111,6 +111,7 @@
             if (d.hasOwnProperty('clazz')) {
               d.stacktrace = d.clazz;
             }
+            if (!d.hasOwnProperty('method')) d.method = "";
             perf_data.push(d);
           }
         }
